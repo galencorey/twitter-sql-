@@ -9,7 +9,7 @@ module.exports = function makeRouterWithSockets (io) {
   // a reusable function
   function respondWithAllTweets (req, res, next){
     var allTheTweets;
-    client.query('SELECT content, name, tweets.id FROM tweets JOIN users ON tweets.UserId = users.id;', function(err, result){
+    client.query('SELECT content, name, tweets.id FROM tweets JOIN users ON tweets.UserId = users.id ORDER BY tweets.id DESC LIMIT 8;', function(err, result){
        if (err) throw err;
         allTheTweets = result.rows;
         res.render('index', {
@@ -55,25 +55,27 @@ module.exports = function makeRouterWithSockets (io) {
 
   // create a new tweet
   router.post('/tweets', function(req, res, next){
-    //io.sockets.emit('new_tweet',
+
       client.query('SELECT name, users.id FROM users WHERE name=$1', [req.body.name], function(err, result){
         if (err) throw err;
         var user = result.rows;
           if (user[0]){
-          client.query('INSERT INTO tweets (userId, content) VALUES ($1, $2)', [user[0].id, req.body.content], function (erro, resul){
+          client.query('INSERT INTO tweets (userId, content) VALUES ($1, $2) RETURNING *', [user[0].id, req.body.content], function (erro, resul){
             if (erro) throw new Error('err2');
+            console.log(resul.rows)
+            io.sockets.emit('new_tweet', {name: req.body.name, content: req.body.content});
           });
         } else {
-          client.query('INSERT INTO users (name) VALUES ($1) RETURNING id', [req.body.name], function(error, resu){
+          client.query('INSERT INTO users (name) VALUES ($1) RETURNING id, name', [req.body.name], function(error, resu){
             if (error) throw new Error('err3');
             var newUser = resu.rows;
-            client.query('INSERT INTO tweets (userId, content) VALUES ($1, $2)', [newUser[0], req.body.content], function (errorr, res1){
-              if (errorr) throw new Error('err4');
+            client.query('INSERT INTO tweets (userId, content) VALUES ($1, $2)', [newUser[0].id, req.body.content], function (errorr, res1){
+              if (errorr) throw errorr;
+              io.sockets.emit('new_tweet', {name: newUser[0].name, content: req.body.content});
             })
             })
            }
         })
-     // io.sockets.emit('new_tweet', newTweet);
      res.redirect('/');
   });
 
