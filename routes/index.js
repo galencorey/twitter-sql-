@@ -9,7 +9,7 @@ module.exports = function makeRouterWithSockets (io) {
   // a reusable function
   function respondWithAllTweets (req, res, next){
     var allTheTweets;
-    client.query('SELECT content, name FROM tweets JOIN users ON tweets.UserId = users.id;', function(err, result){
+    client.query('SELECT content, name, tweets.id FROM tweets JOIN users ON tweets.UserId = users.id;', function(err, result){
        if (err) throw err;
         allTheTweets = result.rows;
 
@@ -29,10 +29,9 @@ module.exports = function makeRouterWithSockets (io) {
   // single-user page
   router.get('/users/:username', function(req, res, next){
     var username = req.params.username;
-    client.query('SELECT content, name FROM tweets JOIN users ON tweets.UserId = users.id WHERE name=$1', [username], function(err, result){
+    client.query('SELECT content, name, tweets.id FROM tweets JOIN users ON tweets.UserId = users.id WHERE name=$1', [username], function(err, result){
         if (err) throw err;
         var tweetsForName = result.rows;
-        console.log(result.rows);
         res.render('index', {
         title: 'Twitter.js',
         tweets: tweetsForName,
@@ -44,10 +43,14 @@ module.exports = function makeRouterWithSockets (io) {
 
   // single-tweet page
   router.get('/tweets/:id', function(req, res, next){
-    var tweetsWithThatId = tweetBank.find({ id: Number(req.params.id) });
-    res.render('index', {
+    var tweetID = req.params.id;
+    client.query('SELECT content, name, tweets.id FROM tweets JOIN users ON tweets.UserId = users.id WHERE tweets.id=$1', [tweetID], function(err, result){
+      if (err) throw err;
+      var tweetsWithThatId = result.rows;
+      res.render('index', {
       title: 'Twitter.js',
       tweets: tweetsWithThatId // an array of only one element ;-)
+    });
     });
   });
 
