@@ -12,14 +12,14 @@ module.exports = function makeRouterWithSockets (io) {
     client.query('SELECT content, name FROM tweets JOIN users ON tweets.UserId = users.id;', function(err, result){
        if (err) throw err;
         allTheTweets = result.rows;
-        console.log(result.rows);
+
         res.render('index', {
           title: 'Twitter.js',
           tweets: allTheTweets,
           showForm: true
     })
   })
-};
+}
 
 
   // here we basically treet the root view and tweets view as identical
@@ -28,12 +28,17 @@ module.exports = function makeRouterWithSockets (io) {
 
   // single-user page
   router.get('/users/:username', function(req, res, next){
-    var tweetsForName = tweetBank.find({ name: req.params.username });
-    res.render('index', {
-      title: 'Twitter.js',
-      tweets: tweetsForName,
-      showForm: true,
-      username: req.params.username
+    var username = req.params.username;
+    client.query('SELECT content, name FROM tweets JOIN users ON tweets.UserId = users.id WHERE name=$1', [username], function(err, result){
+        if (err) throw err;
+        var tweetsForName = result.rows;
+        console.log(result.rows);
+        res.render('index', {
+        title: 'Twitter.js',
+        tweets: tweetsForName,
+        showForm: true,
+        username: req.params.username
+    });
     });
   });
 
